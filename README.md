@@ -1,3 +1,5 @@
+
+<img width="1517" height="942" alt="2026-04-27_19-19" src="https://github.com/user-attachments/assets/bba10089-c65b-44da-ae06-7b01b16fcf8d" />
 rsl_shard_tracker.html is free to use, and free to share, but not for selling. 
 
 Simply Load the html file in any browser, any shard numbers you entered are saved localy so that 
