@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSL Shard Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #1a1a2e;
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+    color: #e0e0e0;
+  }
+  .header { text-align: center; margin-bottom: 2rem; }
+  .header h1 { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header p  { font-size: 13px; color: #777; margin-top: 6px; }
+
+  .tracker-card {
+    max-width: 920px;
+    margin: 0 auto;
+    background: #16213e;
+    border-radius: 14px;
+    border: 1px solid #2a2a4a;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #0f0f23; border-bottom: 2px solid #2a2a4a; }
+  th {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.07em; color: #555; padding: 12px 10px; text-align: center;
+  }
+  th:first-child { text-align: left; padding-left: 20px; }
+  tbody tr { border-bottom: 1px solid #1e1e3a; }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 0; vertical-align: middle; }
+
+  .cell {
+    padding: 14px 10px; height: 76px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cell-first { padding-left: 20px; justify-content: flex-start; }
+  .cell-last  { padding-right: 20px; }
+
+  /* BLUE */
+  .row-blue   td { background: rgba(25, 85, 175, 0.20); }
+  .row-blue   td:first-child { border-left: 4px solid #3a8ae8; }
+  /* PURPLE — true violet, not blue */
+  .row-purple td { background: rgba(110, 50, 220, 0.22); }
+  .row-purple td:first-child { border-left: 4px solid #9b59f5; }
+  /* YELLOW */
+  .row-yellow td { background: rgba(200, 155, 15, 0.20); }
+  .row-yellow td:first-child { border-left: 4px solid #e8a820; }
+  /* RED */
+  .row-red    td { background: rgba(190, 40, 40, 0.20); }
+  .row-red    td:first-child { border-left: 4px solid #e84040; }
+
+  .shard-name {
+    font-size: 16px; font-weight: 800;
+    letter-spacing: 0.08em; min-width: 80px;
+  }
+  .row-blue   .shard-name { color: #80c4ff; }
+  .row-purple .shard-name { color: #d0a8ff; }
+  .row-yellow .shard-name { color: #ffe085; }
+  .row-red    .shard-name { color: #ff9595; }
+
+  .count-display {
+    font-size: 28px; font-weight: 800;
+    min-width: 52px; text-align: center;
+  }
+  .row-blue   .count-display { color: #80c4ff; }
+  .row-purple .count-display { color: #d0a8ff; }
+  .row-yellow .count-display { color: #ffe085; }
+  .row-red    .count-display { color: #ff9595; }
+
+  .reset-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .reset-cb   { width: 20px; height: 20px; cursor: pointer; }
+  .reset-lbl  { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .btn {
+    border-radius: 8px; padding: 7px 14px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    border: none; transition: transform 0.08s, opacity 0.12s;
+  }
+  .btn:hover  { opacity: 0.82; }
+  .btn:active { transform: scale(0.94); }
+
+  .row-blue   .btn-incr { background: #1a5fb0; color: #b8daff; }
+  .row-purple .btn-incr { background: #5e22c0; color: #dcc8ff; }
+  .row-yellow .btn-incr { background: #8c6210; color: #ffe490; }
+  .row-red    .btn-incr { background: #8c2020; color: #ffbbbb; }
+
+  .btn-apply {
+    background: #252545; color: #bbb;
+    border: 1px solid #3a3a6a; padding: 7px 12px; font-weight: 600;
+  }
+  .btn-apply:hover { background: #32325a; }
+
+  .pending-input {
+    width: 48px; font-size: 14px; padding: 6px 5px;
+    border-radius: 7px; border: 1px solid #3a3a6a;
+    background: #0f0f23; color: #e0e0e0; text-align: center;
+  }
+  .pending-input:focus { outline: 2px solid #5a5a9a; border-color: transparent; }
+
+  .mercy-col { flex-direction: column; gap: 2px; min-width: 120px; }
+  .mercy-rem { font-size: 13px; font-weight: 700; }
+  .mercy-sub { font-size: 10px; color: #484860; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .row-blue   .mercy-rem { color: #80c4ff; }
+  .row-purple .mercy-rem { color: #d0a8ff; }
+  .row-yellow .mercy-rem { color: #ffe085; }
+  .row-red    .mercy-rem { color: #ff9595; }
+
+  .progress-track {
+    width: 84px; height: 6px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px; margin-top: 5px; overflow: hidden;
+  }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.35s ease; }
+  .row-blue   .progress-fill { background: #3a8ae8; }
+  .row-purple .progress-fill { background: #9b59f5; }
+  .row-yellow .progress-fill { background: #e8a820; }
+  .row-red    .progress-fill { background: #e84040; }
+
+  .mercy-achieved {
+    font-weight: 900 !important;
+    color: #44ff99 !important;
+    animation: flash 0.5s ease;
+  }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .apply-group { display: flex; align-items: center; gap: 6px; }
+
+  .legend {
+    max-width: 920px; margin: 1.2rem auto 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 8px;
+  }
+  .legend-item {
+    background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; color: #777; line-height: 1.6;
+  }
+  .legend-item strong {
+    display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 3px;
+  }
+  .leg-blue   { color: #80c4ff; }
+  .leg-purple { color: #d0a8ff; }
+  .leg-yellow { color: #ffe085; }
+  .leg-red    { color: #ff9595; }
+
+  .footer { text-align: center; margin-top: 1.5rem; font-size: 12px; color: #323250; }
+
+  @media (max-width: 640px) {
+    body { padding: 1rem 0.4rem; }
+    .cell { padding: 10px 6px; height: 64px; }
+    .cell-first { padding-left: 10px; }
+    .btn  { padding: 6px 9px; font-size: 12px; }
+    .count-display { font-size: 22px; }
+    .shard-name { font-size: 13px; min-width: 60px; }
+    th { font-size: 10px; padding: 10px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#9670; RSL Shard Tracker</h1>
+  <p>Track shard usage &amp; mercy counters &mdash; data saved locally, works offline</p>
+</div>
+
+<div class="tracker-card">
+  <table>
+    <thead>
+      <tr>
+        <th>Shard</th>
+        <th>Reset</th>
+        <th>Used</th>
+        <th>+1</th>
+        <th>+10</th>
+        <th>Mercy</th>
+        <th>Apply</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="legend">
+  <div class="legend-item">
+    <strong class="leg-blue">Blue — Ancient</strong>
+    Base 0.5% Lego. Mercy activates at 200 pulls (+5%/shard after).
+  </div>
+  <div class="legend-item">
+    <strong class="leg-purple">Purple — Void</strong>
+    Base 0.5% Lego. Mercy activates at 200 pulls (+5%/shard after).
+  </div>
+  <div class="legend-item">
+    <strong class="leg-yellow">Yellow — Sacred</strong>
+    Base 6% Lego. Mercy activates at 12 pulls (+2%/shard). Max ~59 shards guaranteed.
+  </div>
+  <div class="legend-item">
+    <strong class="leg-red">Red — Primal (Mythical)</strong>
+    Base 0.5% Mythical. Mercy activates at 200 pulls (+1%/shard). Max ~300 guaranteed.
+  </div>
+</div>
+
+<div class="footer">Stored in browser localStorage &mdash; no install, no server, no internet required</div>
+
+<script>
+const SHARDS = [
+  { id:'blue',   label:'BLUE',   mercy:200, note:'mercy @ 200' },
+  { id:'purple', label:'PURPLE', mercy:200, note:'mercy @ 200' },
+  { id:'yellow', label:'YELLOW', mercy:12,  note:'mercy @12 \u00b7 max ~59' },
+  { id:'red',    label:'RED',    mercy:200, note:'mercy @200 \u00b7 max ~300' },
+];
+
+const state = {};
+SHARDS.forEach(s => {
+  try {
+    const v = localStorage.getItem('rsl_v2_' + s.id);
+    state[s.id] = v !== null ? parseInt(v) : 0;
+  } catch(e) { state[s.id] = 0; }
+});
+
+function save(id){ try{localStorage.setItem('rsl_v2_'+id,state[id]);}catch(e){} }
+function getRem(id){ const s=SHARDS.find(x=>x.id===id); return Math.max(s.mercy-state[id],0); }
+function getPct(id){ const s=SHARDS.find(x=>x.id===id); return Math.min(state[id]/s.mercy*100,100); }
+
+function renderAll(){
+  SHARDS.forEach(s=>{
+    document.getElementById('count_'+s.id).textContent = state[s.id];
+    document.getElementById('fill_'+s.id).style.width  = Math.round(getPct(s.id))+'%';
+    const remEl = document.getElementById('rem_'+s.id);
+    const r = getRem(s.id);
+    if(r===0){ remEl.textContent='MERCY!'; remEl.classList.add('mercy-achieved'); }
+    else     { remEl.textContent=r+' to mercy'; remEl.classList.remove('mercy-achieved'); }
+    if(state[s.id]===0) document.getElementById('cb_'+s.id).checked=false;
+  });
+}
+
+function add(id,n){ state[id]=Math.max(0,state[id]+n); save(id); renderAll(); }
+
+function applyPending(id){
+  const inp=document.getElementById('pending_'+id);
+  const n=parseInt(inp.value)||0;
+  if(n!==0) add(id,n);
+  inp.value='';
+}
+
+function resetShard(id,cb){
+  if(cb.checked){
+    state[id]=0;
+    const inp=document.getElementById('pending_'+id);
+    if(inp) inp.value='';
+    save(id); renderAll();
+    setTimeout(()=>cb.checked=false,500);
+  }
+}
+
+const tbody=document.getElementById('tbody');
+SHARDS.forEach(s=>{
+  const tr=document.createElement('tr');
+  tr.className='row-'+s.id;
+  tr.innerHTML=`
+    <td><div class="cell cell-first"><span class="shard-name">${s.label}</span></div></td>
+    <td><div class="cell"><div class="reset-wrap">
+      <input type="checkbox" class="reset-cb" id="cb_${s.id}"
+             onchange="resetShard('${s.id}',this)" title="Tick to reset ${s.label} to zero">
+      <label class="reset-lbl" for="cb_${s.id}">reset</label>
+    </div></div></td>
+    <td><div class="cell"><span class="count-display" id="count_${s.id}">0</span></div></td>
+    <td><div class="cell"><button class="btn btn-incr" onclick="add('${s.id}',1)">+1</button></div></td>
+    <td><div class="cell"><button class="btn btn-incr" onclick="add('${s.id}',10)">+10</button></div></td>
+    <td><div class="cell mercy-col">
+      <span class="mercy-rem" id="rem_${s.id}">${s.mercy} to mercy</span>
+      <span class="mercy-sub">${s.note}</span>
+      <div class="progress-track"><div class="progress-fill" id="fill_${s.id}" style="width:0%"></div></div>
+    </div></td>
+    <td><div class="cell cell-last"><div class="apply-group">
+      <input type="number" class="pending-input" id="pending_${s.id}" placeholder="n" min="0"
+             onkeydown="if(event.key==='Enter')applyPending('${s.id}')">
+      <button class="btn btn-apply" onclick="applyPending('${s.id}')">Apply</button>
+    </div></div></td>
+  `;
+  tbody.appendChild(tr);
+});
+
+renderAll();
+</script>
+</body>
+</html>
